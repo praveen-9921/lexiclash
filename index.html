@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LexiClash - Real-Time Word Duel</title>
+    <link rel="stylesheet" href="style.css" />
+    <!-- Google Fonts & FontAwesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@500;700&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <!-- Canvas Confetti Engine -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Socket.IO Client -->
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+</head>
+
+<body>
+    <div class="background-glow"></div>
+    <div class="grid-overlay"></div>
+
+    <!-- Dynamic Notification Toasts Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <div class="app-container">
+        <!-- Header Navbar -->
+        <header class="navbar glass-panel">
+            <div class="logo">
+                <i class="fa-solid fa-cubes-stacked logo-icon"></i>
+                <span>LEXI<span class="highlight">CLASH</span></span>
+            </div>
+            <div id="connection-status" class="status-badge offline">
+                <span class="dot"></span>
+                <span class="status-text">Disconnected</span>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- SCREEN 1: LOBBY -->
+            <section id="screen-lobby" class="screen active">
+                <div class="glass-card hero-card">
+                    <h1>Master the Word Duel</h1>
+                    <p class="subtitle">Outsmart your opponent in a real-time, turn-based battle of letters.</p>
+
+                    <div class="form-group">
+                        <label for="player-name"><i class="fa-solid fa-user"></i> Player Name</label>
+                        <input type="text" id="player-name" placeholder="Enter your alias..." maxlength="15"
+                            autocomplete="off" />
+                        <small id="error-player-name" class="error-msg hidden"></small>
+                    </div>
+
+                    <div class="lobby-actions">
+                        <button id="btn-create-room" class="btn btn-primary glow-btn">
+                            <i class="fa-solid fa-plus"></i> Create New Room
+                        </button>
+
+                        <div class="divider"><span>OR</span></div>
+
+                        <div class="join-box">
+                            <div class="input-with-error">
+                                <input type="text" id="join-room-code" placeholder="ROOM CODE" maxlength="6" />
+                                <small id="error-room-code" class="error-msg hidden"></small>
+                            </div>
+                            <button id="btn-join-room" class="btn btn-secondary">
+                                <i class="fa-solid fa-right-to-bracket"></i> Join
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SCREEN 2: ROOM WAITING & WORD SELECTION -->
+            <section id="screen-room" class="screen">
+                <div class="glass-card room-card">
+                    <div class="room-header">
+                        <div class="room-info">
+                            <span class="label">ROOM CODE</span>
+                            <div class="code-wrapper">
+                                <h2 id="display-room-code">------</h2>
+                                <button id="btn-copy-code" class="icon-btn" title="Copy Code">
+                                    <i class="fa-solid fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Player Cards -->
+                    <div class="players-container">
+                        <div id="player1-card" class="player-slot glass-panel">
+                            <div class="avatar"><i class="fa-solid fa-user-ninja"></i></div>
+                            <div class="player-details">
+                                <span id="p1-name" class="p-name">Waiting...</span>
+                                <span id="p1-status" class="p-status">Offline</span>
+                            </div>
+                        </div>
+                        <div class="vs-badge">VS</div>
+                        <div id="player2-card" class="player-slot glass-panel">
+                            <div class="avatar"><i class="fa-solid fa-user-astronaut"></i></div>
+                            <div class="player-details">
+                                <span id="p2-name" class="p-name">Waiting...</span>
+                                <span id="p2-status" class="p-status">Waiting for player...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Configuration Form (Hidden until both connected) -->
+                    <div id="setup-section" class="setup-section hidden">
+                        <hr class="glass-divider" />
+
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-ruler-horizontal"></i> Select Word Length Range</label>
+                            <div class="range-selector">
+                                <button class="range-btn active" data-range="3-5">3–5</button>
+                                <button class="range-btn" data-range="5-7">5–7</button>
+                                <button class="range-btn" data-range="7-9">7–9</button>
+                                <button class="range-btn" data-range="10+">10+</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="secret-word"><i class="fa-solid fa-lock"></i> Your Secret Word</label>
+                            <div class="password-wrapper">
+                                <input type="password" id="secret-word"
+                                    placeholder="Enter word matching chosen range..." autocomplete="off" />
+                                <button type="button" id="toggle-word-visibility" class="icon-btn">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                            <p id="word-hint" class="input-hint">Word must be 3 to 5 letters long.</p>
+                            <small id="error-secret-word" class="error-msg hidden"></small>
+                        </div>
+
+                        <button id="btn-submit-word" class="btn btn-primary glow-btn full-width">
+                            <i class="fa-solid fa-check"></i> Lock In Secret Word
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SCREEN 3: GAME BOARD -->
+            <section id="screen-game" class="screen">
+                <div class="game-dashboard">
+                    <div id="turn-banner" class="glass-panel turn-banner active-turn">
+                        <i class="fa-solid fa-bolt banner-icon"></i>
+                        <span id="turn-text">Your Turn to Guess!</span>
+                    </div>
+
+                    <div class="duel-grid">
+                        <!-- Target Area -->
+                        <div class="glass-card board-card opponent-board">
+                            <h3><i class="fa-solid fa-crosshairs"></i> Opponent's Word</h3>
+                            <p class="card-desc">Guess letters or solve the full word to win.</p>
+
+                            <div id="opponent-word-display" class="letter-slots-container"></div>
+
+                            <div id="action-controls" class="action-controls">
+                                <form id="form-guess-letter" class="input-row">
+                                    <input type="text" id="input-letter" maxlength="1" placeholder="A-Z"
+                                        autocomplete="off" />
+                                    <button type="submit" class="btn btn-primary">Guess Letter</button>
+                                </form>
+
+                                <div class="divider"><span>OR SOLVE</span></div>
+
+                                <form id="form-guess-word" class="input-row">
+                                    <input type="text" id="input-full-word" placeholder="Solve full word..."
+                                        autocomplete="off" />
+                                    <button type="submit" class="btn btn-accent">Guess Word</button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Side History & Self Defense -->
+                        <div class="side-panel">
+                            <div class="glass-card own-word-card">
+                                <h3><i class="fa-solid fa-shield-halved"></i> Your Defense</h3>
+                                <p class="card-desc">Word opponent is guessing:</p>
+                                <div id="own-word-display" class="letter-slots-container small"></div>
+                            </div>
+
+                            <div class="glass-card history-card">
+                                <h3><i class="fa-solid fa-clock-rotate-left"></i> Tried Letters</h3>
+                                <div id="guessed-letters-list" class="tags-container"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- VICTORY / DEFEAT MODAL -->
+        <div id="modal-game-over" class="modal-overlay hidden">
+            <div class="glass-card modal-card">
+                <div id="winner-icon" class="result-icon win">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+                <h2 id="result-title">Victory!</h2>
+                <p id="result-message">You cracked the secret word successfully!</p>
+
+                <div class="revealed-words-box glass-panel">
+                    <div>Your Word: <strong id="summary-own-word">---</strong></div>
+                    <div>Opponent's Word: <strong id="summary-opp-word">---</strong></div>
+                </div>
+
+                <div class="modal-actions">
+                    <button id="btn-play-again" class="btn btn-primary glow-btn">
+                        <i class="fa-solid fa-rotate-right"></i> Play Again
+                    </button>
+                    <button id="btn-return-lobby" class="btn btn-secondary">
+                        <i class="fa-solid fa-house"></i> Lobby
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="script.js"></script>
+</body>
+
+</html>
