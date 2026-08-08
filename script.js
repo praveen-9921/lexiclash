@@ -20,6 +20,7 @@ const state = {
     wordLengthRange: '3-5',
     secretWord: '',
     opponentWordMask: [],
+    ownWordMask: [],
     guessedLetters: []
 };
 
@@ -49,6 +50,9 @@ const elements = {
     p2Name: document.getElementById('p2-name'),
     p2Status: document.getElementById('p2-status'),
     setupSection: document.getElementById('setup-section'),
+    rangeHostSection: document.getElementById('range-host-section'),
+    rangeGuestSection: document.getElementById('range-guest-section'),
+    wordRangeDisplay: document.getElementById('word-range-display'),
     rangeBtns: document.querySelectorAll('.range-btn'),
     inputSecretWord: document.getElementById('secret-word'),
     errorSecretWord: document.getElementById('error-secret-word'),
@@ -61,6 +65,7 @@ const elements = {
     turnText: document.getElementById('turn-text'),
     oppWordDisplay: document.getElementById('opponent-word-display'),
     ownWordDisplay: document.getElementById('own-word-display'),
+    mySecretWordDisplay: document.getElementById('my-secret-word-display'),
     actionControls: document.getElementById('action-controls'),
     formGuessLetter: document.getElementById('form-guess-letter'),
     inputLetter: document.getElementById('input-letter'),
@@ -232,19 +237,66 @@ if (elements.btnJoinRoom) {
 if (socket) {
     socket.on('room_joined', (data) => {
         state.roomCode = data.roomCode;
+        state.isHost = socket.id === data.players[0]?.id;
+        if (data.wordLengthRange) {
+            state.wordLengthRange = data.wordLengthRange;
+            applyWordLengthRangeUI();
+        }
         if (elements.displayRoomCode) elements.displayRoomCode.innerText = data.roomCode;
         switchScreen('room');
         updateRoomPlayers(data.players);
+        updateSetupAccess();
         showToast(`Joined Room: ${data.roomCode}`, 'success');
     });
 
     socket.on('player_update', (players) => {
         updateRoomPlayers(players);
     });
+
+    socket.on('word_range_update', (data) => {
+        state.wordLengthRange = data.wordLengthRange;
+        applyWordLengthRangeUI();
+        if (!state.isHost) {
+            showToast(`Word length set to ${formatRangeLabel(data.wordLengthRange)}.`, 'info', 3000);
+        }
+    });
+}
+
+function updateSetupAccess() {
+    if (state.isHost) {
+        if (elements.rangeHostSection) elements.rangeHostSection.classList.remove('hidden');
+        if (elements.rangeGuestSection) elements.rangeGuestSection.classList.add('hidden');
+    } else {
+        if (elements.rangeHostSection) elements.rangeHostSection.classList.add('hidden');
+        if (elements.rangeGuestSection) elements.rangeGuestSection.classList.remove('hidden');
+    }
+}
+
+function formatRangeLabel(range) {
+    const labels = {
+        '3-5': '3–5 letters',
+        '5-7': '5–7 letters',
+        '7-9': '7–9 letters',
+        '10+': '10+ letters'
+    };
+    return labels[range] || range;
+}
+
+function applyWordLengthRangeUI() {
+    elements.rangeBtns.forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.range === state.wordLengthRange);
+    });
+    updateWordHint();
+    if (elements.wordRangeDisplay) {
+        elements.wordRangeDisplay.innerText = formatRangeLabel(state.wordLengthRange);
+    }
 }
 
 function updateRoomPlayers(players) {
     if (!players) return;
+
+    state.isHost = socket.id === players[0]?.id;
+    updateSetupAccess();
 
     if (players[0]) {
         if (elements.p1Name) elements.p1Name.innerText = players[0].name;
@@ -257,7 +309,11 @@ function updateRoomPlayers(players) {
     } else {
         if (elements.p2Name) elements.p2Name.innerText = 'Waiting...';
         if (elements.p2Status) elements.p2Status.innerText = 'Waiting for opponent';
-        if (elements.setupSection) elements.setupSection.classList.add('hidden');
+        if (state.isHost && elements.setupSection) {
+            elements.setupSection.classList.remove('hidden');
+        } else if (elements.setupSection) {
+            elements.setupSection.classList.add('hidden');
+        }
     }
 }
 
@@ -271,13 +327,20 @@ if (elements.btnCopyCode) {
     });
 }
 
-// Range Selector
+// Range Selector (host only)
 elements.rangeBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
-        elements.rangeBtns.forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
+        if (!state.isHost) return;
+
         state.wordLengthRange = btn.dataset.range;
-        updateWordHint();
+        applyWordLengthRangeUI();
+
+        if (socket && socket.connected && state.roomCode) {
+            socket.emit('set_word_range', {
+                roomCode: state.roomCode,
+                range: state.wordLengthRange
+            });
+        }
     });
 });
 
@@ -354,15 +417,22 @@ if (socket) {
     socket.on('game_start', (data) => {
         switchScreen('game');
         state.opponentWordMask = Array(data.opponentWordLength).fill('_');
+        state.ownWordMask = Array(state.secretWord.length).fill('_');
         state.myTurn = data.activePlayerId === socket.id;
         state.guessedLetters = [];
 
+        renderMySecretWord();
         renderOpponentWord();
         renderOwnWord();
         renderHistoryTags();
         updateTurnUI();
         showToast('Match Started!', 'info');
     });
+}
+
+function renderMySecretWord() {
+    if (!elements.mySecretWordDisplay) return;
+    elements.mySecretWordDisplay.innerText = state.secretWord || '----';
 }
 
 function renderOpponentWord() {
@@ -379,12 +449,16 @@ function renderOpponentWord() {
 function renderOwnWord() {
     if (!elements.ownWordDisplay) return;
     elements.ownWordDisplay.innerHTML = '';
-    for (let char of state.secretWord) {
+    const mask = state.ownWordMask.length
+        ? state.ownWordMask
+        : Array(state.secretWord.length).fill('_');
+
+    mask.forEach((char) => {
         const tile = document.createElement('div');
-        tile.className = 'letter-tile revealed';
-        tile.innerText = char;
+        tile.className = `letter-tile ${char !== '_' ? 'revealed' : ''}`;
+        tile.innerText = char !== '_' ? char : '';
         elements.ownWordDisplay.appendChild(tile);
-    }
+    });
 }
 
 function updateTurnUI() {
@@ -449,17 +523,38 @@ if (socket) {
         state.myTurn = data.nextTurnPlayerId === socket.id;
 
         if (data.guessedLetter) {
-            state.guessedLetters.push({
-                letter: data.guessedLetter,
-                hit: data.isHit
-            });
-            renderHistoryTags();
-            showToast(data.isHit ? `Hit! Letter '${data.guessedLetter}' found.` : `Miss! '${data.guessedLetter}' not present.`, data.isHit ? 'success' : 'error');
+            if (data.role === 'guesser') {
+                state.guessedLetters.push({
+                    letter: data.guessedLetter,
+                    hit: data.isHit
+                });
+                renderHistoryTags();
+                showToast(
+                    data.isHit
+                        ? `Hit! Letter '${data.guessedLetter}' found.`
+                        : `Miss! '${data.guessedLetter}' not present.`,
+                    data.isHit ? 'success' : 'error'
+                );
+            } else if (data.role === 'defender') {
+                showToast(
+                    data.isHit
+                        ? `Opponent guessed '${data.guessedLetter}' — hit on your word!`
+                        : `Opponent guessed '${data.guessedLetter}' — miss.`,
+                    data.isHit ? 'error' : 'info'
+                );
+            }
         }
 
+        // Only the guesser updates their opponent-word progress
         if (data.updatedMask) {
             state.opponentWordMask = data.updatedMask;
             renderOpponentWord();
+        }
+
+        // Defender sees letters revealed on their own word
+        if (data.defenseMask) {
+            state.ownWordMask = data.defenseMask;
+            renderOwnWord();
         }
 
         updateTurnUI();

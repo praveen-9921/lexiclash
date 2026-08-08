@@ -494,6 +494,61 @@ input.input-invalid {
     box-shadow: 0 0 10px var(--primary-glow);
 }
 
+.range-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.host-badge {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    margin-left: 6px;
+    border-radius: 999px;
+    background: rgba(99, 102, 241, 0.25);
+    color: var(--primary-color);
+    font-weight: 600;
+    vertical-align: middle;
+}
+
+.range-display-badge {
+    display: inline-block;
+    padding: 10px 16px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--glass-border);
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--primary-color);
+    margin: 0;
+}
+
+.your-secret-word-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.label-sm {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.secret-word-value {
+    font-family: var(--font-heading);
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    color: var(--primary-color);
+}
+
 .password-wrapper {
     position: relative;
     display: flex;

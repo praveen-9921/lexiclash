@@ -111,14 +111,20 @@
                     <div id="setup-section" class="setup-section hidden">
                         <hr class="glass-divider" />
 
-                        <div class="form-group">
-                            <label><i class="fa-solid fa-ruler-horizontal"></i> Select Word Length Range</label>
+                        <div id="range-host-section" class="form-group">
+                            <label><i class="fa-solid fa-ruler-horizontal"></i> Select Word Length Range <span class="host-badge">Room Owner</span></label>
                             <div class="range-selector">
                                 <button class="range-btn active" data-range="3-5">3–5</button>
                                 <button class="range-btn" data-range="5-7">5–7</button>
                                 <button class="range-btn" data-range="7-9">7–9</button>
                                 <button class="range-btn" data-range="10+">10+</button>
                             </div>
+                        </div>
+
+                        <div id="range-guest-section" class="form-group hidden">
+                            <label><i class="fa-solid fa-ruler-horizontal"></i> Word Length Range</label>
+                            <p id="word-range-display" class="range-display-badge">3–5 letters</p>
+                            <p class="input-hint">Chosen by the room owner.</p>
                         </div>
 
                         <div class="form-group">
@@ -178,7 +184,11 @@
                         <div class="side-panel">
                             <div class="glass-card own-word-card">
                                 <h3><i class="fa-solid fa-shield-halved"></i> Your Defense</h3>
-                                <p class="card-desc">Word opponent is guessing:</p>
+                                <div class="your-secret-word-row">
+                                    <span class="label-sm">Your Secret Word</span>
+                                    <div id="my-secret-word-display" class="secret-word-value">----</div>
+                                </div>
+                                <p class="card-desc">Letters opponent has found on your word:</p>
                                 <div id="own-word-display" class="letter-slots-container small"></div>
                             </div>
 
